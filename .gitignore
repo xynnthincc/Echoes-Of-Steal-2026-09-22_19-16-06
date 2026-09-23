@@ -115,3 +115,8 @@ InitTestScene*.unity*
 
 # Unity Collab backup folder (jangan di-commit)
 Echoes Of Steal_BackUpThisFolder_ButDontShipItWithYourGame/
+
+Screenshots/
+
+# Sumber asset mentah (extract pack) — hanya di disk, jangan di-version-control
+RawAssets/

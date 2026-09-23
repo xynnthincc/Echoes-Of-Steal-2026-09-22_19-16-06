@@ -1,4 +1,5 @@
 using EchoesOfSteal.Combat;
+using EchoesOfSteal.Systems;
 using EchoesOfSteal.UI;
 using UnityEngine;
 
@@ -18,6 +19,11 @@ namespace EchoesOfSteal.Player
         [Header("Attack")]
         [SerializeField] private AttackArea _attackArea;
         [SerializeField] private float _attackCooldown = 0.4f;
+        [SerializeField] private SlashEffect _slashEffect;
+
+        [Header("Visuals")]
+        [SerializeField] private SpriteRenderer _spriteRenderer;
+        [SerializeField] private SpriteAnimator _animator;
 
         private Rigidbody2D _rb;
         private Vector2 _facing = Vector2.up;
@@ -29,6 +35,8 @@ namespace EchoesOfSteal.Player
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            if (_spriteRenderer == null)
+                _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         }
 
         private void FixedUpdate()
@@ -36,8 +44,16 @@ namespace EchoesOfSteal.Player
             Vector2 input = _joystick != null ? _joystick.InputVector : Vector2.zero;
             _rb.linearVelocity = input * _moveSpeed;
 
-            if (input.sqrMagnitude > 0.001f)
+            bool isMoving = input.sqrMagnitude > 0.001f;
+            if (isMoving)
+            {
                 _facing = input.normalized;
+                if (input.x != 0f && _spriteRenderer != null)
+                    _spriteRenderer.flipX = input.x < 0f;
+            }
+
+            if (_animator != null)
+                _animator.SetWalking(isMoving);
         }
 
         /// <summary>
@@ -51,6 +67,20 @@ namespace EchoesOfSteal.Player
 
             _nextAttackTime = Time.time + _attackCooldown;
             _attackArea.PerformAttack(_facing);
+            if (_slashEffect != null)
+                _slashEffect.Play(_facing);
+        }
+
+        /// <summary>Upgrade: menambah kecepatan gerak (dipakai PlayerUpgrader).</summary>
+        public void AddMoveSpeed(float amount)
+        {
+            _moveSpeed += amount;
+        }
+
+        /// <summary>Upgrade: mengalikan cooldown serangan (nilai &lt; 1 = lebih cepat).</summary>
+        public void MultiplyAttackCooldown(float multiplier)
+        {
+            _attackCooldown *= Mathf.Max(0.05f, multiplier);
         }
     }
 }

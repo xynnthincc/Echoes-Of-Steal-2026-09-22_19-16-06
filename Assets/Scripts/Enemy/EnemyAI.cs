@@ -1,4 +1,5 @@
 using EchoesOfSteal.Combat;
+using EchoesOfSteal.Systems;
 using UnityEngine;
 
 namespace EchoesOfSteal.Enemy
@@ -18,9 +19,11 @@ namespace EchoesOfSteal.Enemy
 
         [SerializeField] private EnemyData _data;
         [SerializeField] private LayerMask _playerLayers;
+        [SerializeField] private SpriteAnimator _animator;
 
         private Rigidbody2D _rb;
         private EnemyHealth _health;
+        private SpriteRenderer _sprite;
         private Transform _target;
         private State _state = State.Idle;
         private float _hitReactUntil = -1f;
@@ -33,6 +36,7 @@ namespace EchoesOfSteal.Enemy
         {
             _rb = GetComponent<Rigidbody2D>();
             _health = GetComponent<EnemyHealth>();
+            _sprite = GetComponentInChildren<SpriteRenderer>();
 
             if (_data == null)
                 Debug.LogError("EnemyAI: _data wajib di-assign.", this);
@@ -60,6 +64,10 @@ namespace EchoesOfSteal.Enemy
 
         private void FixedUpdate()
         {
+            bool walking = _state == State.Chasing && _target != null && Time.time >= _hitReactUntil;
+            if (_animator != null)
+                _animator.SetWalking(walking);
+
             if (_state != State.Chasing || _target == null)
             {
                 _rb.linearVelocity = Vector2.zero;
@@ -71,6 +79,9 @@ namespace EchoesOfSteal.Enemy
 
             Vector2 direction = ((Vector2)(_target.position - transform.position)).normalized;
             _rb.linearVelocity = direction * _data.MoveSpeed;
+
+            if (direction.x != 0f && _sprite != null)
+                _sprite.flipX = direction.x < 0f;
         }
 
         private void OnTriggerEnter2D(Collider2D other)

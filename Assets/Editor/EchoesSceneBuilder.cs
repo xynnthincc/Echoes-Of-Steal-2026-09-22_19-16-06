@@ -491,7 +491,9 @@ namespace EchoesOfSteal.EditorTools
         private static void WireWaveSpawner(GameObject spawnerGo, GameObject player, GameObject enemyPrefab, WaveData[] waves)
         {
             SerializedObject so = new SerializedObject(spawnerGo.GetComponent<WaveSpawner>());
-            so.FindProperty("_enemyPrefab").objectReferenceValue = enemyPrefab.GetComponent<EnemyAI>();
+            SerializedProperty prefabsProperty = so.FindProperty("_enemyPrefabs");
+            prefabsProperty.arraySize = 1;
+            prefabsProperty.GetArrayElementAtIndex(0).objectReferenceValue = enemyPrefab.GetComponent<EnemyAI>();
             so.FindProperty("_playerTransform").objectReferenceValue = player.transform;
             so.FindProperty("_autoStart").boolValue = false;
 
@@ -1073,6 +1075,7 @@ namespace EchoesOfSteal.EditorTools
             NormalizeAttackButtonVisual(primary);
             NormalizeStartPanelVisual(primary);
             NormalizeGameOverPanelVisual(primary);
+            NormalizeUpgradePanelVisual(primary);
 
             if (hud != null)
                 hud.SetAsFirstSibling();
@@ -1158,7 +1161,7 @@ namespace EchoesOfSteal.EditorTools
             return tmp;
         }
 
-        private static Button EnsureUiButton(Transform parent, string name, string label, float labelSize, Color bgColor, Vector2 anchor, Vector2 pos, Vector2 dim, UnityAction onClick)
+        private static Button EnsureUiButton(Transform parent, string name, string label, float labelSize, Color bgColor, Vector2 anchor, Vector2 pos, Vector2 dim, UnityAction onClick, bool createLabel = true)
         {
             Transform found = parent.Find(name);
             Button button = found != null ? found.GetComponent<Button>() : null;
@@ -1196,26 +1199,29 @@ namespace EchoesOfSteal.EditorTools
             image.raycastTarget = true;
             button.targetGraphic = image;
 
-            TMP_Text labelTmp = button.GetComponentInChildren<TMP_Text>(true);
-            GameObject labelGo;
-            if (labelTmp == null)
+            if (createLabel)
             {
-                labelGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
-                labelGo.transform.SetParent(button.transform, false);
-                labelTmp = labelGo.GetComponent<TMP_Text>();
+                TMP_Text labelTmp = button.GetComponentInChildren<TMP_Text>(true);
+                GameObject labelGo;
+                if (labelTmp == null)
+                {
+                    labelGo = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
+                    labelGo.transform.SetParent(button.transform, false);
+                    labelTmp = labelGo.GetComponent<TMP_Text>();
+                }
+                else
+                {
+                    labelGo = labelTmp.gameObject;
+                    labelGo.name = "Text";
+                }
+                SetFullRect(labelTmp.GetComponent<RectTransform>());
+                if (_font != null && labelTmp.font == null)
+                    labelTmp.font = _font;
+                labelTmp.fontSize = labelSize;
+                labelTmp.alignment = TextAlignmentOptions.Center;
+                labelTmp.text = label;
+                labelTmp.raycastTarget = false;
             }
-            else
-            {
-                labelGo = labelTmp.gameObject;
-                labelGo.name = "Text";
-            }
-            SetFullRect(labelTmp.GetComponent<RectTransform>());
-            if (_font != null && labelTmp.font == null)
-                labelTmp.font = _font;
-            labelTmp.fontSize = labelSize;
-            labelTmp.alignment = TextAlignmentOptions.Center;
-            labelTmp.text = label;
-            labelTmp.raycastTarget = false;
 
             while (button.onClick.GetPersistentEventCount() > 0)
                 UnityEventTools.RemovePersistentListener(button.onClick, 0);
@@ -1227,6 +1233,7 @@ namespace EchoesOfSteal.EditorTools
 
         private static void NormalizeHudVisuals(Transform hud)
         {
+            SetFullStretch(hud.GetComponent<RectTransform>());
             HashSet<Transform> claimed = new HashSet<Transform>();
 
             Transform bg = hud.Find("HealthBarBG");
@@ -1236,7 +1243,7 @@ namespace EchoesOfSteal.EditorTools
                 bgGo.transform.SetParent(hud, false);
                 bg = bgGo.transform;
             }
-            SetRect(bg.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(210f, -30f), new Vector2(400f, 40f));
+            SetRect(bg.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(230f, -40f), new Vector2(420f, 44f));
             Image bgImage = bg.GetComponent<Image>();
             if (bgImage == null)
                 bgImage = bg.gameObject.AddComponent<Image>();
@@ -1270,8 +1277,75 @@ namespace EchoesOfSteal.EditorTools
             claimed.Add(fill);
             bg.SetAsFirstSibling();
 
-            EnsureTmp(hud, "ScoreText", claimed, "Score: 0", 50f, TextAlignmentOptions.TopRight, new Vector2(1f, 1f), new Vector2(-220f, -40f), new Vector2(400f, 60f));
-            EnsureTmp(hud, "WaveText", claimed, "Wave 1", 50f, TextAlignmentOptions.Top, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(400f, 60f));
+            TMP_Text score = EnsureTmp(hud, "ScoreText", claimed, "Score: 0", 44f, TextAlignmentOptions.TopRight, new Vector2(1f, 1f), new Vector2(-240f, -40f), new Vector2(400f, 60f));
+            score.fontStyle = FontStyles.Bold;
+            TMP_Text wave = EnsureTmp(hud, "WaveText", claimed, "Wave 1", 44f, TextAlignmentOptions.Top, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(420f, 60f));
+            wave.fontStyle = FontStyles.Bold;
+
+            Transform xpBg = hud.Find("XPBarBG");
+            if (xpBg == null)
+            {
+                GameObject xpBgGo = new GameObject("XPBarBG", typeof(RectTransform), typeof(Image));
+                xpBgGo.transform.SetParent(hud, false);
+                xpBg = xpBgGo.transform;
+            }
+            SetRect(xpBg.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(306f, -104f), new Vector2(440f, 26f));
+            Image xpBgImage = xpBg.GetComponent<Image>();
+            if (xpBgImage == null)
+                xpBgImage = xpBg.gameObject.AddComponent<Image>();
+            Sprite frameSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Generated/frame_9slice.png");
+            if (frameSprite != null)
+            {
+                xpBgImage.sprite = frameSprite;
+                xpBgImage.type = Image.Type.Sliced;
+                xpBgImage.pixelsPerUnitMultiplier = 0.55f;
+            }
+            xpBgImage.color = new Color(0.15f, 0.15f, 0.2f, 0.9f);
+            xpBgImage.raycastTarget = false;
+
+            Transform xpFill = xpBg.Find("XPBarFill");
+            if (xpFill == null)
+            {
+                GameObject xpFillGo = new GameObject("XPBarFill", typeof(RectTransform), typeof(Image));
+                xpFillGo.transform.SetParent(xpBg, false);
+                xpFill = xpFillGo.transform;
+            }
+            RectTransform xpFillRt = xpFill.GetComponent<RectTransform>();
+            xpFillRt.anchorMin = Vector2.zero;
+            xpFillRt.anchorMax = Vector2.one;
+            xpFillRt.offsetMin = new Vector2(5f, 5f);
+            xpFillRt.offsetMax = new Vector2(-5f, -5f);
+            Image xpFillImage = xpFill.GetComponent<Image>();
+            if (xpFillImage == null)
+                xpFillImage = xpFill.gameObject.AddComponent<Image>();
+            xpFillImage.sprite = frameSprite;
+            xpFillImage.type = Image.Type.Filled;
+            xpFillImage.fillMethod = Image.FillMethod.Horizontal;
+            xpFillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+            xpFillImage.fillAmount = 0f;
+            xpFillImage.color = new Color(1f, 0.84f, 0.25f);
+            xpFillImage.raycastTarget = false;
+
+            Transform levelText = hud.Find("LevelText");
+            if (levelText == null)
+            {
+                GameObject levelGo = new GameObject("LevelText", typeof(RectTransform), typeof(TextMeshProUGUI));
+                levelGo.transform.SetParent(hud, false);
+                levelText = levelGo.transform;
+            }
+            SetRect(levelText.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(44f, -104f), new Vector2(110f, 30f));
+            TMP_Text levelTmp = levelText.GetComponent<TMP_Text>();
+            if (levelTmp != null)
+            {
+                if (_font != null && levelTmp.font == null)
+                    levelTmp.font = _font;
+                levelTmp.fontSize = 26f;
+                levelTmp.fontStyle = FontStyles.Bold;
+                levelTmp.alignment = TextAlignmentOptions.Left;
+                levelTmp.SetText("Lv 1");
+                levelTmp.raycastTarget = false;
+                levelTmp.color = new Color(1f, 0.84f, 0.25f);
+            }
         }
 
         private static void NormalizeJoystickVisual(Canvas primary)
@@ -1280,16 +1354,16 @@ namespace EchoesOfSteal.EditorTools
             if (joystick == null)
                 return;
             joystick.transform.SetParent(primary.transform, false);
-            SetRect(joystick.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(200f, 200f), new Vector2(300f, 300f));
+            SetRect(joystick.GetComponent<RectTransform>(), new Vector2(0f, 0f), new Vector2(240f, 240f), new Vector2(340f, 340f));
             Transform handle = joystick.transform.Find("Handle");
             if (handle != null)
-                SetRect(handle.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(120f, 120f));
+                SetRect(handle.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(130f, 130f));
         }
 
         private static void NormalizeAttackButtonVisual(Canvas primary)
         {
             PlayerController player = Object.FindAnyObjectByType<PlayerController>();
-            EnsureUiButton(primary.transform, "AttackButton", "ATTACK", 32f, new Color(0.85f, 0.2f, 0.2f, 0.9f), new Vector2(1f, 0f), new Vector2(-200f, 200f), new Vector2(200f, 200f), player != null ? (UnityAction)player.TryAttack : null);
+            EnsureUiButton(primary.transform, "AttackButton", "ATTACK", 32f, new Color(0.85f, 0.2f, 0.2f, 0.9f), new Vector2(1f, 0f), new Vector2(-240f, 240f), new Vector2(230f, 230f), player != null ? (UnityAction)player.TryAttack : null, false);
         }
 
         private static Transform NormalizePanelRoot(Canvas primary, string name)
@@ -1342,9 +1416,11 @@ namespace EchoesOfSteal.EditorTools
             Transform content = NormalizePanelContent(root);
 
             HashSet<Transform> claimed = new HashSet<Transform> { content };
-            EnsureTmp(content, "TitleText", claimed, "ECHOES OF STEAL", 80f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 150f), new Vector2(1400f, 140f));
-            EnsureTmp(content, "SubtitleText", claimed, "Survive the waves", 40f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 50f), new Vector2(1000f, 80f));
-            EnsureUiButton(content, "BeginButton", "BEGIN", 40f, new Color(0.2f, 0.55f, 0.3f), new Vector2(0.5f, 0.5f), new Vector2(0f, -120f), new Vector2(320f, 90f), (UnityAction)panel.BeginGame);
+            TMP_Text title = EnsureTmp(content, "TitleText", claimed, "ECHOES OF STEAL", 72f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1700f, 130f));
+            title.fontStyle = FontStyles.Bold;
+            TMP_Text subtitle = EnsureTmp(content, "SubtitleText", claimed, "Survive the waves", 36f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 90f), new Vector2(1100f, 60f));
+            subtitle.color = new Color(0.85f, 0.85f, 0.9f);
+            EnsureUiButton(content, "BeginButton", "BEGIN", 44f, new Color(0.2f, 0.55f, 0.3f), new Vector2(0.5f, 0.5f), new Vector2(0f, -150f), new Vector2(360f, 100f), (UnityAction)panel.BeginGame);
 
             root.gameObject.SetActive(true);
             content.gameObject.SetActive(true);
@@ -1360,12 +1436,100 @@ namespace EchoesOfSteal.EditorTools
             Transform content = NormalizePanelContent(root);
 
             HashSet<Transform> claimed = new HashSet<Transform> { content };
-            EnsureTmp(content, "TitleText", claimed, "GAME OVER", 80f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f), new Vector2(800f, 120f));
-            EnsureTmp(content, "FinalScoreText", claimed, "Score: 0", 50f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(600f, 80f));
-            EnsureUiButton(content, "RestartButton", "RESTART", 40f, new Color(0.85f, 0.25f, 0.25f), new Vector2(0.5f, 0.5f), new Vector2(0f, -170f), new Vector2(320f, 90f), (UnityAction)panel.Restart);
+            TMP_Text goTitle = EnsureTmp(content, "TitleText", claimed, "GAME OVER", 76f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 150f), new Vector2(1400f, 130f));
+            goTitle.fontStyle = FontStyles.Bold;
+            EnsureTmp(content, "FinalScoreText", claimed, "Score: 0", 52f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 30f), new Vector2(900f, 70f));
+            EnsureUiButton(content, "RestartButton", "RESTART", 44f, new Color(0.85f, 0.25f, 0.25f), new Vector2(0.5f, 0.5f), new Vector2(0f, -150f), new Vector2(360f, 100f), (UnityAction)panel.Restart);
 
             root.gameObject.SetActive(true);
             content.gameObject.SetActive(false);
+            EditorUtility.SetDirty(panel);
+        }
+
+        /// <summary>Panel level-up: overlay gelap + judul + 3 kartu upgrade (CardA/B/C) ber-frame 9-slice.</summary>
+        private static void NormalizeUpgradePanelVisual(Canvas primary)
+        {
+            Transform root = NormalizePanelRoot(primary, "UpgradePanel");
+            UpgradePanel panel = root.GetComponent<UpgradePanel>();
+            if (panel == null)
+                panel = root.gameObject.AddComponent<UpgradePanel>();
+            Transform content = NormalizePanelContent(root);
+
+            HashSet<Transform> claimed = new HashSet<Transform> { content };
+            TMP_Text title = EnsureTmp(content, "TitleText", claimed, "LEVEL UP!", 72f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 250f), new Vector2(1200f, 110f));
+            title.fontStyle = FontStyles.Bold;
+            title.color = new Color(1f, 0.84f, 0.25f);
+            TMP_Text hint = EnsureTmp(content, "HintText", claimed, "Pilih satu upgrade", 34f, TextAlignmentOptions.Center, new Vector2(0.5f, 0.5f), new Vector2(0f, 170f), new Vector2(1000f, 60f));
+            hint.color = new Color(0.85f, 0.85f, 0.9f);
+
+            Sprite frameSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Generated/frame_9slice.png");
+            string[] cardNames = { "CardA", "CardB", "CardC" };
+            float[] cardX = { -520f, 0f, 520f };
+            for (int i = 0; i < cardNames.Length; i++)
+            {
+                Transform card = content.Find(cardNames[i]);
+                GameObject cardGo;
+                if (card != null)
+                {
+                    cardGo = card.gameObject;
+                }
+                else
+                {
+                    cardGo = new GameObject(cardNames[i], typeof(RectTransform), typeof(Image), typeof(Button));
+                    cardGo.transform.SetParent(content, false);
+
+                    GameObject titleGo = new GameObject("TitleText", typeof(RectTransform), typeof(TextMeshProUGUI));
+                    titleGo.transform.SetParent(cardGo.transform, false);
+                    GameObject descGo = new GameObject("DescText", typeof(RectTransform), typeof(TextMeshProUGUI));
+                    descGo.transform.SetParent(cardGo.transform, false);
+                }
+
+                SetRect(cardGo.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(cardX[i], -60f), new Vector2(460f, 420f));
+                Image cardImage = cardGo.GetComponent<Image>();
+                if (cardImage != null)
+                {
+                    if (frameSprite != null)
+                    {
+                        cardImage.sprite = frameSprite;
+                        cardImage.type = Image.Type.Sliced;
+                    }
+                    cardImage.color = new Color(0.18f, 0.2f, 0.28f, 0.98f);
+                    cardImage.raycastTarget = true;
+                }
+
+                Button cardButton = cardGo.GetComponent<Button>();
+                if (cardButton != null)
+                    cardButton.targetGraphic = cardImage;
+
+                TMP_Text cardTitle = cardGo.transform.Find("TitleText")?.GetComponent<TMP_Text>();
+                if (cardTitle != null)
+                {
+                    SetRect(cardTitle.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(420f, 70f));
+                    if (_font != null && cardTitle.font == null)
+                        cardTitle.font = _font;
+                    cardTitle.fontSize = 42f;
+                    cardTitle.fontStyle = FontStyles.Bold;
+                    cardTitle.alignment = TextAlignmentOptions.Center;
+                    cardTitle.color = new Color(1f, 0.84f, 0.25f);
+                    cardTitle.raycastTarget = false;
+                }
+
+                TMP_Text cardDesc = cardGo.transform.Find("DescText")?.GetComponent<TMP_Text>();
+                if (cardDesc != null)
+                {
+                    SetRect(cardDesc.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0f, -60f), new Vector2(390f, 220f));
+                    if (_font != null && cardDesc.font == null)
+                        cardDesc.font = _font;
+                    cardDesc.fontSize = 34f;
+                    cardDesc.alignment = TextAlignmentOptions.Center;
+                    cardDesc.color = Color.white;
+                    cardDesc.raycastTarget = false;
+                }
+            }
+
+            root.gameObject.SetActive(true);
+            content.gameObject.SetActive(false);
+            root.SetAsLastSibling();
             EditorUtility.SetDirty(panel);
         }
     }

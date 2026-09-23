@@ -19,6 +19,7 @@ namespace EchoesOfSteal.Systems
         [SerializeField] private PlayerHealth _playerHealth;
 
         private int _score;
+        private bool _isGameOver;
 
         /// <summary>Argumen: skor baru (FR-6, untuk HUD).</summary>
         public event Action<int> OnScoreChanged;
@@ -47,15 +48,21 @@ namespace EchoesOfSteal.Systems
         private void OnEnable()
         {
             _waveSpawner.OnEnemyKilled += HandleEnemyKilled;
-            _playerHealth.OnHealthChanged += OnHealthChanged;
+            _playerHealth.OnHealthChanged += HandleHealthChanged;
             _playerHealth.OnPlayerDied += HandlePlayerDied;
         }
 
         private void OnDisable()
         {
             _waveSpawner.OnEnemyKilled -= HandleEnemyKilled;
-            _playerHealth.OnHealthChanged -= OnHealthChanged;
+            _playerHealth.OnHealthChanged -= HandleHealthChanged;
             _playerHealth.OnPlayerDied -= HandlePlayerDied;
+        }
+
+        /// <summary>Relay event HP dari PlayerHealth ke HUD (harus method — bukan snapshot delegate event).</summary>
+        private void HandleHealthChanged(float current, float max)
+        {
+            OnHealthChanged?.Invoke(current, max);
         }
 
         /// <summary>Memulai gameplay dari Start Screen (dipanggil tombol Begin).</summary>
@@ -76,6 +83,18 @@ namespace EchoesOfSteal.Systems
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
+        /// <summary>
+        /// Pause/resume gameplay untuk UI pilihan (mis. UpgradePanel level-up).
+        /// No-op setelah Game Over supaya panel tidak "membangkitkan" game yang sudah berakhir.
+        /// </summary>
+        public void SetPaused(bool paused)
+        {
+            if (_isGameOver)
+                return;
+
+            Time.timeScale = paused ? 0f : 1f;
+        }
+
         private void HandleEnemyKilled(EnemyAI enemy)
         {
             _score++;
@@ -84,6 +103,7 @@ namespace EchoesOfSteal.Systems
 
         private void HandlePlayerDied()
         {
+            _isGameOver = true;
             Time.timeScale = 0f;
             _waveSpawner.StopSpawning();
             OnGameOver?.Invoke(_score);

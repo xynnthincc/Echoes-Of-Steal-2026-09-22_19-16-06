@@ -47,5 +47,13 @@ namespace EchoesOfSteal.Player
             if (_currentHealth <= 0f)
                 OnPlayerDied?.Invoke();
         }
+
+        /// <summary>Upgrade: menambah HP maksimum sekaligus heal sebanyak itu (dipakai PlayerUpgrader).</summary>
+        public void AddMaxHealth(float amount)
+        {
+            _maxHealth += amount;
+            _currentHealth = Mathf.Min(_currentHealth + amount, _maxHealth);
+            OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
+        }
     }
 }

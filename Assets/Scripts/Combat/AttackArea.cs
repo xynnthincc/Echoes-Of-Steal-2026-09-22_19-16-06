@@ -38,6 +38,7 @@ namespace EchoesOfSteal.Combat
             Vector2 center = (Vector2)transform.position + direction * _forwardOffset;
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
+            _contactFilter.useTriggers = true;
             _contactFilter.SetLayerMask(_targetLayers);
             int hitCount = Physics2D.OverlapBox(center, _boxSize, angle, _contactFilter, _results);
 
@@ -64,6 +65,24 @@ namespace EchoesOfSteal.Combat
                 OnAttackHit?.Invoke(damagedCount);
 
             return damagedCount;
+        }
+
+        /// <summary>Upgrade: menambah damage dasar (dipakai PlayerUpgrader).</summary>
+        public void AddDamage(float amount)
+        {
+            _damage += amount;
+        }
+
+        /// <summary>Upgrade: menambah gaya knockback (dipakai PlayerUpgrader).</summary>
+        public void AddKnockback(float amount)
+        {
+            _knockbackForce += amount;
+        }
+
+        /// <summary>Upgrade: mengalikan ukuran hitbox serangan (dipakai PlayerUpgrader).</summary>
+        public void MultiplyBoxSize(float multiplier)
+        {
+            _boxSize *= multiplier;
         }
 
         private void OnDrawGizmosSelected()

@@ -49,7 +49,7 @@ namespace EchoesOfSteal.EditorTools
             Check("WaveSpawner ada", spawner != null);
             Check("WaveSpawner._waves = 3", ArraySize(spawner, "_waves") == 3);
             Check("WaveSpawner._playerTransform wired", RefWired(spawner, "_playerTransform"));
-            Check("WaveSpawner._enemyPrefab wired", RefWired(spawner, "_enemyPrefab"));
+            Check("WaveSpawner._enemyPrefabs[0] wired", ArraySize(spawner, "_enemyPrefabs") >= 1 && RefWired(spawner, "_enemyPrefabs.Array.data[0]"));
             Check("WaveSpawner._autoStart = false", BoolVal(spawner, "_autoStart") == false);
 
             GameObject managerGo = GameObject.Find("GameManager");

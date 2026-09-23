@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 6511547581113447268}
   - component: {fileID: 4111289819069659201}
   - component: {fileID: 7343459592389518173}
+  - component: {fileID: 4322277622677504214}
   m_Layer: 9
   m_Name: Enemy
   m_TagString: Untagged
@@ -31,7 +32,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -85,7 +86,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
+  m_Sprite: {fileID: 4035959289877228764, guid: 6afbae4ddabb4e0bb61cb7a304d5d52b, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -172,6 +173,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EchoesOfSteal.Enemy.EnemyHealth
   _data: {fileID: 11400000, guid: a31c4da6ddd5cac42bb61924554d5d69, type: 2}
+  _sprite: {fileID: 3102339158545742224}
+  _flashColor: {r: 1, g: 0.3, b: 0.3, a: 1}
+  _flashDuration: 0.09
 --- !u!114 &7343459592389518173
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -188,3 +192,24 @@ MonoBehaviour:
   _playerLayers:
     serializedVersion: 2
     m_Bits: 256
+  _animator: {fileID: 4322277622677504214}
+--- !u!114 &4322277622677504214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 654813835312570799}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e37fbf0449101b44b8f4c84b8577d410, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EchoesOfSteal.Systems.SpriteAnimator
+  _renderer: {fileID: 3102339158545742224}
+  _idleFrames: []
+  _walkFrames:
+  - {fileID: 4035959289877228764, guid: 6afbae4ddabb4e0bb61cb7a304d5d52b, type: 3}
+  - {fileID: -982904232830982447, guid: 6afbae4ddabb4e0bb61cb7a304d5d52b, type: 3}
+  - {fileID: -350908408369970039, guid: 6afbae4ddabb4e0bb61cb7a304d5d52b, type: 3}
+  - {fileID: -5409570386352685021, guid: 6afbae4ddabb4e0bb61cb7a304d5d52b, type: 3}
+  _secondsPerFrame: 0.16

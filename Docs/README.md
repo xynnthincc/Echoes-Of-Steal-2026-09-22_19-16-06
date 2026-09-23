@@ -110,7 +110,7 @@ Konvensi coding & prinsip arsitektur (event-driven, object pooling, ScriptableOb
 
 ## 📜 Kredit Aset
 
-- **Sprite Karakter & Musuh:** Free Pixel Art Pack via Itch.io
+- **Sprite Karakter & Musuh:** Ninja Adventure Asset Pack by Pixel-boy and AAA, via [itch.io](https://pixel-boy.itch.io/ninja-adventure-asset-pack), licensed CC0 1.0 Universal
 - **Tilemap Arena:** Kenney.nl (CC0 / Public Domain)
 - **Audio & SFX:** OpenGameArt.org
 

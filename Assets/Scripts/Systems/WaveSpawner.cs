@@ -1,5 +1,6 @@
 using System.Collections;
 using System;
+using System.Collections.Generic;
 using EchoesOfSteal.Enemy;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -7,24 +8,28 @@ using Random = UnityEngine.Random;
 namespace EchoesOfSteal.Systems
 {
     /// <summary>
-    /// Spawner wave musuh (FR-3): mengambil konfigurasi dari WaveData (ScriptableObject),
-    /// instansiasi lewat ObjectPool (tanpa Instantiate/Destroy runtime), spawn di ring
-    /// mengelilingi pemain. Mengekspos event (OnWaveStarted/OnWaveCleared/OnEnemyKilled)
-    /// untuk UI & GameManager di fase berikutnya — tanpa referensi langsung antar sistem.
+    /// Spawner wave musuh (FR-3): konfigurasi dari WaveData (ScriptableObject), instansiasi
+    /// via ObjectPool per-tipe prefab (tanpa Instantiate/Destroy runtime), spawn di ring
+    /// mengelilingi pemain. Komposisi tipe musuh bergantung nomor wave:
+    /// index 0 = normal (selalu), 1 = fast (mulai wave 3), 2 = tank (mulai wave 5).
+    /// Mengekspos event untuk UI & GameManager — tanpa referensi langsung antar sistem.
     /// Wave terakhir diulang terus untuk survival tanpa batas.
     /// </summary>
     public class WaveSpawner : MonoBehaviour
     {
         [Header("Setup")]
-        [SerializeField] private EnemyAI _enemyPrefab;
+        [SerializeField] private EnemyAI[] _enemyPrefabs;
         [SerializeField] private WaveData[] _waves;
         [SerializeField] private Transform _playerTransform;
 
         [Header("Behavior")]
         [SerializeField] private bool _autoStart = true;
         [SerializeField, Min(1f)] private float _spawnDistance = 9f;
+        [SerializeField, Min(1)] private int _fastFromWave = 3;
+        [SerializeField, Min(1)] private int _tankFromWave = 5;
 
-        private ObjectPool<EnemyAI> _pool;
+        private readonly Dictionary<EnemyAI, ObjectPool<EnemyAI>> _pools = new Dictionary<EnemyAI, ObjectPool<EnemyAI>>();
+        private readonly Dictionary<EnemyAI, ObjectPool<EnemyAI>> _instancePool = new Dictionary<EnemyAI, ObjectPool<EnemyAI>>();
         private int _aliveCount;
         private Coroutine _waveRoutine;
 
@@ -39,15 +44,28 @@ namespace EchoesOfSteal.Systems
 
         private void Awake()
         {
-            if (_enemyPrefab == null || _waves == null || _waves.Length == 0 || _playerTransform == null)
+            if (_enemyPrefabs == null || _enemyPrefabs.Length == 0 || _waves == null || _waves.Length == 0 || _playerTransform == null)
             {
-                Debug.LogError("WaveSpawner: _enemyPrefab, _waves, dan _playerTransform wajib di-assign.", this);
+                Debug.LogError("WaveSpawner: _enemyPrefabs, _waves, dan _playerTransform wajib di-assign.", this);
                 enabled = false;
                 return;
             }
 
-            _pool = new ObjectPool<EnemyAI>(_enemyPrefab, transform);
-            _pool.InstanceCreated += WireEnemy;
+            foreach (EnemyAI prefab in _enemyPrefabs)
+            {
+                if (prefab == null || _pools.ContainsKey(prefab))
+                    continue;
+
+                ObjectPool<EnemyAI> pool = new ObjectPool<EnemyAI>(prefab, transform);
+                pool.InstanceCreated += WireEnemy;
+                _pools[prefab] = pool;
+            }
+
+            if (_pools.Count == 0)
+            {
+                Debug.LogError("WaveSpawner: tidak ada prefab musuh valid.", this);
+                enabled = false;
+            }
         }
 
         private void Start()
@@ -85,7 +103,7 @@ namespace EchoesOfSteal.Systems
                 waveNumber++;
 
                 OnWaveStarted?.Invoke(waveNumber);
-                yield return SpawnWave(wave);
+                yield return SpawnWave(wave, waveNumber);
                 yield return new WaitUntil(() => _aliveCount == 0);
                 OnWaveCleared?.Invoke(waveNumber);
 
@@ -93,24 +111,45 @@ namespace EchoesOfSteal.Systems
             }
         }
 
-        private IEnumerator SpawnWave(WaveData wave)
+        private IEnumerator SpawnWave(WaveData wave, int waveNumber)
         {
             for (int i = 0; i < wave.EnemyCount; i++)
             {
-                SpawnEnemy();
+                SpawnEnemy(waveNumber);
                 yield return new WaitForSeconds(wave.SpawnInterval);
             }
         }
 
-        private void SpawnEnemy()
+        private void SpawnEnemy(int waveNumber)
         {
+            EnemyAI prefab = PickPrefab(waveNumber);
+            if (prefab == null)
+                return;
+
             float angle = Random.Range(0f, Mathf.PI * 2f);
             Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * _spawnDistance;
             Vector2 position = (Vector2)_playerTransform.position + offset;
 
-            EnemyAI enemy = _pool.Get(position);
+            ObjectPool<EnemyAI> pool = _pools[prefab];
+            EnemyAI enemy = pool.Get(position);
+            _instancePool[enemy] = pool;
             enemy.SetTarget(_playerTransform);
             _aliveCount++;
+        }
+
+        private EnemyAI PickPrefab(int waveNumber)
+        {
+            int weights = 10;
+            int fastWeight = waveNumber >= _fastFromWave && _enemyPrefabs.Length > 1 ? 5 : 0;
+            int tankWeight = waveNumber >= _tankFromWave && _enemyPrefabs.Length > 2 ? 3 : 0;
+            int total = weights + fastWeight + tankWeight;
+
+            int roll = Random.Range(0, total);
+            if (roll < weights)
+                return _enemyPrefabs[0];
+            if (roll < weights + fastWeight)
+                return _enemyPrefabs[1];
+            return _enemyPrefabs.Length > 2 ? _enemyPrefabs[2] : _enemyPrefabs[0];
         }
 
         private void WireEnemy(EnemyAI enemy)
@@ -122,7 +161,12 @@ namespace EchoesOfSteal.Systems
         {
             _aliveCount--;
             OnEnemyKilled?.Invoke(enemy);
-            _pool.Release(enemy);
+
+            if (_instancePool.TryGetValue(enemy, out ObjectPool<EnemyAI> pool))
+            {
+                _instancePool.Remove(enemy);
+                pool.Release(enemy);
+            }
         }
     }
 }
